@@ -16,6 +16,9 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+    GRID_STEP = 2  # Шаг сетки в процентах
+    GRID_SIZE = 5  # Количество ордеров вверх и вниз от текущей цены
+
     @staticmethod
     def validate():
         """Проверка обязательных параметров перед запуском"""

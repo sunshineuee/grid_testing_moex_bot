@@ -8,11 +8,10 @@ from bot.storage import assets_storage, orders_storage
 from datetime import datetime
 
 bot = GridTradingBot()
-open_positions = {}
 
 
 def get_next_order_id():
-    """Генерирует очередной порядковый номер `order_id` (1, 2, 3, ...)"""
+    """Генерирует порядковый номер `order_id` (1, 2, 3, ...)"""
     try:
         with open("data/orders.csv", "r", encoding="utf-8") as file:
             reader = csv.reader(file)
@@ -23,24 +22,32 @@ def get_next_order_id():
         return "1"
 
 
-def update_order_status(order_id, new_status):
-    """Обновляет статус ордера в CSV"""
-    updated_orders = []
+def create_grid_orders(figi, base_price, lots):
+    """Создаёт сетку ордеров, если её ещё нет"""
+    try:
+        with open("data/orders.csv", "r", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            orders = [row for row in reader if row[0] == figi]
+            if orders:
+                logger.info(f"Сетка ордеров уже существует. Новая сетка не создаётся.")
+                return  # Сетка уже создана, выходим из функции
+    except FileNotFoundError:
+        pass  # Если файла нет, создаём сетку с нуля
 
-    with open("data/orders.csv", "r", encoding="utf-8") as file:
-        lines = file.readlines()
+    # Создаём сетку ордеров
+    for i in range(1, Config.GRID_SIZE + 1):
+        buy_price = round(base_price * (1 - (Config.GRID_STEP / 100) * i), 2)
+        sell_price = round(base_price * (1 + (Config.GRID_STEP / 100) * i), 2)
 
-    for line in lines:
-        data = line.strip().split(",")
-        if len(data) < 7:
-            continue
+        buy_order_id = get_next_order_id()
+        sell_order_id = get_next_order_id()
 
-        if data[5] == order_id:
-            data[6] = new_status  # Обновляем статус ордера
-        updated_orders.append(",".join(data))
+        logger.info(f"Создаём BUY-ордер на {buy_price}, ID: {buy_order_id}")
+        logger.info(f"Создаём SELL-ордер на {sell_price}, ID: {sell_order_id}")
 
-    with open("data/orders.csv", "w", encoding="utf-8") as file:
-        file.write("\n".join(updated_orders) + "\n")
+        orders_storage.append([figi, "Sberbank", buy_price, "BUY", datetime.now().isoformat(), buy_order_id, "PENDING"])
+        orders_storage.append(
+            [figi, "Sberbank", sell_price, "SELL", datetime.now().isoformat(), sell_order_id, "PENDING"])
 
 
 def main():
@@ -50,50 +57,45 @@ def main():
     figi = "BBG004730N88"
     lots = 1
 
+    price = bot.api.get_current_price(figi)
+    if price:
+        logger.info(f"Проверяем существование сетки ордеров для {figi}")
+        create_grid_orders(figi, price, lots)  # Создаём сетку только если её нет
+
     while True:
         price = bot.api.get_current_price(figi)
         timestamp = datetime.now().isoformat()
 
         if price:
-            if figi in open_positions:
-                buy_price, buy_order_id = open_positions[figi]
-                target_price = buy_price * (1 + Config.PROFIT_PERCENT / 100)
-                stop_loss_price = buy_price * (1 - Config.STOP_LOSS_PERCENT / 100)
+            # ✅ Записываем котировку в `assets.csv`
+            assets_storage.append([figi, "Sberbank", price, timestamp])
+            logger.info(f"Записана текущая котировка: {figi} - {price}")
 
-                if price >= target_price or price <= stop_loss_price:
-                    trade_type = "SELL"
-                    reason = "Take-Profit" if price >= target_price else "Stop-Loss"
+            with open("data/orders.csv", "r", encoding="utf-8") as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    if row[0] == "asset_id":
+                        continue  # Пропускаем заголовки
 
-                    if Config.MODE == "TRADE":
-                        sell_order_id = bot.api.place_order(figi, lots, trade_type, price)
-                    else:
-                        sell_order_id = get_next_order_id()  # Генерируем порядковый номер
+                    order_id = row[5]
+                    order_price = float(row[2])
+                    order_type = row[3]
+                    status = row[6]
 
-                    bot.trade(figi, price, lots, trade_type)
-                    logger.info(f"Продажа {figi} по {price} ({reason})")
-                    send_telegram_message(f"✅ Продажа {figi} по {price} ({reason})")
+                    if status == "PENDING" and ((order_type == "BUY" and price <= order_price) or (
+                            order_type == "SELL" and price >= order_price)):
+                        logger.info(f"Исполняем {order_type}-ордер {order_id} по цене {price}")
+                        update_order_status(order_id, "FILLED")
 
-                    update_order_status(buy_order_id, "FILLED")
-
-                    orders_storage.append([figi, "Sberbank", price, trade_type, timestamp, sell_order_id, "PENDING"])
-                    open_positions.pop(figi)
-
-                else:
-                    logger.info(f"Ждём {figi}: цена {price}, TP {target_price}, SL {stop_loss_price}")
-            else:
-                trade_type = "BUY"
-
-                if Config.TRADE_MODE == "TRADE":
-                    buy_order_id = bot.api.place_order(figi, lots, trade_type, price)
-                else:
-                    buy_order_id = get_next_order_id()  # Генерируем порядковый номер
-
-                bot.trade(figi, price, lots, trade_type)
-                logger.info(f"Покупка {figi} по {price}")
-
-                open_positions[figi] = (price, buy_order_id)
-                assets_storage.append([figi, "Sberbank", price, timestamp])
-                orders_storage.append([figi, "Sberbank", price, trade_type, timestamp, buy_order_id, "PENDING"])
+                        # После исполнения создаём новый противоположный ордер
+                        new_price = round(price * (1 + Config.GRID_STEP / 100), 2) if order_type == "BUY" else round(
+                            price * (1 - Config.GRID_STEP / 100), 2)
+                        new_order_id = get_next_order_id()
+                        new_order_type = "SELL" if order_type == "BUY" else "BUY"
+                        orders_storage.append(
+                            [figi, "Sberbank", new_price, new_order_type, datetime.now().isoformat(), new_order_id,
+                             "PENDING"])
+                        logger.info(f"Создан новый {new_order_type}-ордер {new_order_id} по цене {new_price}")
 
         time.sleep(Config.UPDATE_INTERVAL)
 
