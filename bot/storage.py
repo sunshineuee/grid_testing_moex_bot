@@ -29,7 +29,3 @@ class Storage:
 # Экземпляры для работы с CSV
 assets_storage = Storage("assets.csv")
 orders_storage = Storage("orders.csv")
-
-# Пример записи данных
-assets_storage.append(["AAPL", "Apple Inc.", 180.5, datetime.now().isoformat()])
-orders_storage.append(["AAPL", "Apple Inc.", 180.5, "BUY", datetime.now().isoformat(), "order123", "PENDING"])
