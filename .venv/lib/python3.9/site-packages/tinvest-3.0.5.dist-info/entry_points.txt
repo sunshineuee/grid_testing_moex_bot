@@ -1,0 +1,3 @@
+[console_scripts]
+tinvest=tinvest.cli.app:app
+
