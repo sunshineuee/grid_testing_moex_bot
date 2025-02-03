@@ -9,6 +9,8 @@ class Config:
     TRADE_MODE = os.getenv("TRADE_MODE", "TEST").upper()  # TEST или TRADE
     DATA_FOLDER = os.getenv("DATA_FOLDER", "data")  # Папка для хранения CSV-файлов
     UPDATE_INTERVAL = int(os.getenv("UPDATE_INTERVAL", 5))  # Интервал обновления данных (в секундах)
+    PROFIT_PERCENT = 1.0  # Процент прибыли для закрытия сделки
+    STOP_LOSS_PERCENT = 1.0  # Процент убытка для закрытия сделки
 
     # Настройки Telegram (если нужна интеграция)
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
