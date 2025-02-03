@@ -9,15 +9,21 @@ class Config:
     TRADE_MODE = os.getenv("TRADE_MODE", "TEST").upper()  # TEST или TRADE
     DATA_FOLDER = os.getenv("DATA_FOLDER", "data")  # Папка для хранения CSV-файлов
     UPDATE_INTERVAL = int(os.getenv("UPDATE_INTERVAL", 5))  # Интервал обновления данных (в секундах)
-    PROFIT_PERCENT = 1.0  # Процент прибыли для закрытия сделки
-    STOP_LOSS_PERCENT = 1.0  # Процент убытка для закрытия сделки
+
+    PROFIT_PERCENT = 0.01  # Процент прибыли для закрытия сделки
+    STOP_LOSS_PERCENT = 0.01  # Процент убытка для закрытия сделки
+    GRID_STEP = 0.01  # Шаг сетки в процентах
+    GRID_SIZE = 1  # Количество ордеров вверх и вниз от текущей цены
 
     # Настройки Telegram (если нужна интеграция)
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-    GRID_STEP = 2  # Шаг сетки в процентах
-    GRID_SIZE = 5  # Количество ордеров вверх и вниз от текущей цены
+    FIGI_LIST = {
+        "BBG004730N88": "Sberbank",
+        "BBG000B9XRY4": "Gazprom",
+        "BBG0013HGFT4": "Lukoil"
+    }
 
     @staticmethod
     def validate():
