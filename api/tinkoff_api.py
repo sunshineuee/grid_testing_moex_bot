@@ -1,17 +1,17 @@
 import logging
 from tinkoff.invest import Client, RequestError
-from tinkoff.invest.services import MarketDataService
-from tinkoff.invest.schemas import OrderDirection, OrderType, GetLastPricesRequest
-from config import Config
+from tinkoff.invest.schemas import OrderDirection, OrderType
+
+from conf.config import Config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class TinkoffAPI:
-    def __init__(self, token: str, sandbox_mode: bool):
-        self.token = token
-        self.sandbox_mode = sandbox_mode
+    def __init__(self):
+        self.token = Config.TINKOFF_API_TOKEN
+        self.sandbox_mode = Config.TINKOFF_SANDBOX_MODE
         self.client = Client(self.token)
 
         if self.sandbox_mode:

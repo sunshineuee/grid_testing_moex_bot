@@ -1,4 +1,0 @@
-tinkoff-investments
-requests
-python-dotenv
-pytest
