@@ -73,6 +73,22 @@ class CSVStorage:
 
         return processed_objects
 
+    def append(self, data_object, index_field: str = None):
+
+        # ✅ Если передан `index_field`, заменяем его уникальным значением
+        if index_field and hasattr(data_object, index_field):
+            setattr(data_object, index_field, self.generate_unique_id(index_field))
+
+        # ✅ Записываем объект в CSV
+        with open(self.filepath, mode="a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=self.fields)
+
+            row = {field: str(getattr(data_object, field, "")) for field in
+                   self.fields}  # Динамическое формирование строки
+            writer.writerow(row)
+
+        return data_object
+
     def load_existing_ids(self, index_field: str) -> set:
 
         existing_ids = set()

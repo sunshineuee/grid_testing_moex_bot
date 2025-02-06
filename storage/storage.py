@@ -43,6 +43,8 @@ class Storage:
     def extend(self, data_objects: List, index_field: str = None):
         return self.storage.extend(data_objects, index_field)
 
+    def append(self, data_object, index_field: str = None):
+        return self.storage.append(data_object, index_field)
 # Экземпляры для работы с CSV
 assets_storage = Storage("data/assets.csv", Asset)
 orders_storage = Storage("data/orders.csv", Order)

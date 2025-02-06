@@ -1,5 +1,7 @@
 import requests
-from bot.config import Config
+
+from conf.config import Config
+
 
 def send_telegram_message(message: str):
     """ Отправляет сообщение в Telegram. """

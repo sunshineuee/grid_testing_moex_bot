@@ -3,9 +3,7 @@ from tinkoff.invest import Client, RequestError
 from tinkoff.invest.schemas import OrderDirection, OrderType
 
 from conf.config import Config
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from logs.logger import logger
 
 
 class TinkoffAPI:
@@ -15,14 +13,15 @@ class TinkoffAPI:
         self.client = Client(self.token)
 
         if self.sandbox_mode:
-            logger.info("Запуск в режиме песочницы")
+            logger.info("Запуск Тиньков API в режиме песочницы")
         else:
-            logger.info("Запуск в реальном режиме")
+            logger.info("Запуск Тиньков API в реальном режиме")
 
     def get_current_price(self, figi: str) -> float:
         """Получает текущую цену актива."""
         try:
             with Client(self.token) as client:  # Обернем в with для управления соединением
+
                 response = client.market_data.get_last_prices(figi=[figi])
                 if response.last_prices:
                     return response.last_prices[0].price.units + response.last_prices[0].price.nano / 1e9

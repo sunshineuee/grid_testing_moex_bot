@@ -1,5 +1,9 @@
+from conf.config import Config
+from logs.logger import logger
+from messenger.telegram_bot import send_telegram_message
+from storage.dto.assets import Asset
 from storage.dto.order import Order
-from storage.storage import orders_storage
+from storage.storage import orders_storage, assets_storage
 from strategy.basic_grid_strategy import Strategy
 from datetime import datetime
 
@@ -7,10 +11,17 @@ from datetime import datetime
 class LiveTesting:
     def __init__(self, config):
         self.orders = {name: [] for name in config.FIGI_LIST.values()}
+        self.timestamp = datetime.now()
+        logger.info(f"Бот запущен в режиме {'ТЕСТ' if Config.TRADE_MODE == 'TEST' else 'ТОРГОВЛИ'}.")
+        send_telegram_message(f"✅ Бот запущен в режиме {'ТЕСТ' if Config.TRADE_MODE == 'TEST' else 'ТОРГОВЛИ'}.")
 
     def execute(self, figi_list, api):
         for figi, asset_name in figi_list.items():
+            self.timestamp = datetime.now()
             price = api.get_current_price(figi)
+            if price:
+                assets_storage.append(Asset(figi=figi, asset_name=asset_name, price=price, timestamp=self.timestamp))
+                logger.info(f"Записана текущая котировка: {asset_name} ({figi}) - {price}")
             self.close_orders(figi, asset_name, price)
             self.cleanup_orders(figi, asset_name, price)
             self.generate_orders(figi, asset_name, price)
@@ -33,6 +44,7 @@ class LiveTesting:
         for order in executed_orders:
             order.status = "FILLED"
             orders_storage.update(order, "id")
+            logger.info(f"✅ Исполняем {order.type}-ордер {order.id} для {order.asset_name} по цене {order.price}")
 
         # ✅ 3. Находим встречные ордера по `linked_id`
         linked_orders = []  # ✅ Используем `list()`, а не `set()`
@@ -47,6 +59,7 @@ class LiveTesting:
             if linked_order and linked_order not in linked_orders:  # Проверяем, чтобы не было дубликатов
                 linked_order.status = "CANCELLED"
                 orders_storage.update(linked_order, "id")
+                logger.info(f"❌ Отменяем {order.type}-ордер {order.id} для {order.asset_name} по цене {order.price}")
                 linked_orders.append(linked_order)  # ✅ Добавляем в `list()`
 
         # ✅ 4. Обновляем `self.orders[asset_name]`
@@ -59,17 +72,16 @@ class LiveTesting:
 
     def generate_orders(self, figi, asset_name, price):
         strategy = Strategy(figi, asset_name)
-        timestamp = datetime.now()
         new_orders = [
             Order(
                 figi=o.figi,
                 asset_name=o.asset_name,
                 price=o.price,
                 type=o.type,
-                timestamp=timestamp,
+                timestamp=self.timestamp,
                 status="PENDING",
                 id=o.id,
-                linked_id=f"{timestamp}_{o.id}"
+                linked_id=f"{self.timestamp}_{o.id}"
             )
             for o in strategy.generate_orders(price, self.orders)
         ]
