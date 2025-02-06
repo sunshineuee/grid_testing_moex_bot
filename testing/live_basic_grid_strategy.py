@@ -8,10 +8,12 @@ class LiveTesting:
     def __init__(self, config):
         self.orders = {name: [] for name in config.FIGI_LIST.values()}
 
-    def execute(self, figi, asset_name, price):
-        self.close_orders(figi, asset_name, price)
-        self.cleanup_orders(figi, asset_name, price)
-        self.generate_orders(figi, asset_name, price)
+    def execute(self, figi_list, api):
+        for figi, asset_name in figi_list.items():
+            price = api.get_current_price(figi)
+            self.close_orders(figi, asset_name, price)
+            self.cleanup_orders(figi, asset_name, price)
+            self.generate_orders(figi, asset_name, price)
 
     def close_orders(self, figi, asset_name, price):
         """

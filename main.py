@@ -10,9 +10,7 @@ def main():
     live_testing = LiveTesting(Config)
     api = TinkoffAPI()
     while True:
-        for figi, asset_name in Config.FIGI_LIST.items():
-            price = api.get_current_price(figi)
-            live_testing.execute(figi, asset_name, price)
+        live_testing.execute(Config.FIGI_LIST, api)
 
 if __name__ == "__main__":
     main()
