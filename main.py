@@ -7,7 +7,7 @@ def main():
     live_testing = LiveTesting(Config)
     api = TinkoffAPI()
     while True:
-        live_testing.execute(Config.FIGI_LIST, api)
+        live_testing.execute(Config.ASSET_LIST, api)
 
 if __name__ == "__main__":
     main()

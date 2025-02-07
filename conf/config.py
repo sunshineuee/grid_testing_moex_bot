@@ -19,7 +19,7 @@ def load_config():
         "GRID_SIZE": os.getenv("GRID_SIZE"),
         "TELEGRAM_BOT_TOKEN": os.getenv("TELEGRAM_BOT_TOKEN"),
         "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
-        "FIGI_LIST": None
+        "ASSET_LIST": None
     }
 
     if os.path.exists(CONFIG_PATH):
@@ -29,8 +29,8 @@ def load_config():
                 if config[key] is None:  # Загружаем из JSON, если нет в окружении
                     config[key] = value
 
-    if config["FIGI_LIST"] is None:
-        config["FIGI_LIST"] = {
+    if config["ASSET_LIST"] is None:
+        config["ASSET_LIST"] = {
             "BBG004730N88": "Sberbank",
             "BBG000B9XRY4": "Gazprom",
             "BBG0013HGFT4": "Lukoil"
@@ -54,7 +54,7 @@ class Config:
     GRID_SIZE = int(_config["GRID_SIZE"] or 1)
     TELEGRAM_BOT_TOKEN = _config["TELEGRAM_BOT_TOKEN"] or ""
     TELEGRAM_CHAT_ID = _config["TELEGRAM_CHAT_ID"] or ""
-    FIGI_LIST = _config["FIGI_LIST"]
+    ASSET_LIST = _config["ASSET_LIST"]
 
     @staticmethod
     def validate():

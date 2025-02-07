@@ -1,5 +1,7 @@
 from dataclasses import fields
 from typing import List, Type
+
+from storage.dto.balance import Balance
 from storage.dto.order import Order
 from conf.config import Config
 from storage.dto.assets import Asset
@@ -48,5 +50,6 @@ class Storage:
 # Экземпляры для работы с CSV
 assets_storage = Storage("data/assets.csv", Asset)
 orders_storage = Storage("data/orders.csv", Order)
+balance_storage = Storage("data/balance.csv", Balance)
 
 
