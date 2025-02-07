@@ -1,10 +1,9 @@
 from conf.config import Config
 from logs.logger import logger
 from messenger.telegram_bot import send_telegram_message
-from storage.dto.assets import Asset
 from storage.dto.balance import Balance
 from storage.dto.order import Order
-from storage.storage import orders_storage, assets_storage, balance_storage
+from storage.storage import orders_storage, balance_storage, market_data_storage
 from strategy.basic_grid_strategy import Strategy
 from datetime import datetime
 
@@ -18,15 +17,15 @@ class LiveTesting:
             figi: {"figi": figi, "name": name, "price": 0, "account": 0}
             for figi, name in config.ASSET_LIST.items()
         }
-        logger.info(f"Бот запущен в режиме {'ТЕСТ' if Config.TRADE_MODE == 'TEST' else 'ТОРГОВЛИ'}.")
         send_telegram_message(f"✅ Бот запущен в режиме {'ТЕСТ' if Config.TRADE_MODE == 'TEST' else 'ТОРГОВЛИ'}.")
 
     def execute(self, figi_list, api):
         for figi, asset_name in figi_list.items():
             self.timestamp = datetime.now()
-            price = api.get_current_price(figi)
+            market_data = api.get_live_market_data(figi)
+            price=market_data.last_price
             if price:
-                assets_storage.append(Asset(figi=figi, asset_name=asset_name, price=price, timestamp=self.timestamp))
+                market_data_storage.append(market_data)
                 logger.info(f"Записана текущая котировка: {asset_name} ({figi}) - {price}")
                 self.portfolio_info[figi]["price"] = price
             self.close_orders(figi, asset_name, price)
@@ -52,8 +51,8 @@ class LiveTesting:
             order.status = "FILLED"
             orders_storage.update(order, "id")
             logger.info(f"✅ Исполняем {order.type}-ордер для {order.asset_name} по цене {order.price}")
-            self.portfolio_info[order.figi]["account"] += (1, -1)[order.type == "BUY"]
-            self.balance += order.price if order.type == "BUY" else -order.price
+            self.portfolio_info[order.figi]["account"] += (-1, 1)[order.type == "BUY"]
+            self.balance += order.price if order.type == "SELL" else -order.price
             logger.info(f"💰 Балланс виртуального счета: {self.balance}")
             logger.info(f"📊 Стоимость активов:" + ", ".join(
                 f"{info['name']}: {info['price'] * info['account']}"
@@ -84,7 +83,7 @@ class LiveTesting:
                 linked_order.status = "CANCELLED"
             orders_storage.update(linked_order, "id")
             linked_orders.append(linked_order)  # ✅ Добавляем в `list()`
-            logger.info(f"❌ Отменяем {order.type}-ордер для {order.asset_name} по цене {order.price}")
+            logger.info(f"❌ Отменяем {linked_order.type}-ордер для {linked_order.asset_name} по цене {linked_order.price}")
 
             # ✅ 4. Обновляем `self.orders[asset_name]`
             self.orders[asset_name] = [
